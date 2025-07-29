@@ -6,7 +6,6 @@ use tsify_next::Tsify;
 #[binread]
 #[derive(Serialize, Debug)]
 #[serde(tag = "type")]
-#[br(little)]
 #[cfg_attr(target_arch = "wasm32", derive(Tsify))]
 pub enum SmartBatteryGroup {
     #[br(magic = 1u8)]
@@ -23,6 +22,7 @@ pub enum SmartBatteryGroup {
 #[cfg_attr(target_arch = "wasm32", derive(Tsify))]
 pub struct SmartBatteryStatic {
     pub index: u8,
+    pub index2: u8,
     pub designed_capacity: u32,
     pub loop_times: u16,
     pub full_voltage: u32,
@@ -59,7 +59,6 @@ pub struct SmartBatteryDynamic {
     pub temperature: f32,
     pub cell_count: u8,
     pub capacity_percent: u8,
-    pub battery_state: u64,
 }
 
 #[binread]
@@ -68,7 +67,9 @@ pub struct SmartBatteryDynamic {
 #[cfg_attr(target_arch = "wasm32", derive(Tsify))]
 pub struct SmartBatterySingleVoltage {
     pub index: u8,
+    // pub unknown: u8,
     pub cell_count: u8,
     #[br(count = cell_count, map = |xs: Vec<u16>| xs.into_iter().map(|x| x as f32 / 1000.0).collect())]
     pub cell_voltages: Vec<f32>,
 }
+
