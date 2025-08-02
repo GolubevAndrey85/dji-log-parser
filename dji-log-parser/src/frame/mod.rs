@@ -184,8 +184,11 @@ pub fn records_to_frames(records: Vec<Record>, details: Details) -> Vec<Frame> {
 
                 // Fill OSD record
                 frame.osd.fly_time = osd.fly_time;
-                frame.osd.latitude = osd.latitude;
-                frame.osd.longitude = osd.longitude;
+                // Only update coordinates if they are valid, preserving any AppGPS coordinates
+                if osd.latitude != 0.0 && osd.longitude != 0.0 {
+                    frame.osd.latitude = osd.latitude;
+                    frame.osd.longitude = osd.longitude;
+                }
                 // Fix altitude by adding the home point altitude
                 frame.osd.altitude = osd.altitude + frame.home.altitude;
                 frame.osd.height = osd.altitude;
@@ -376,8 +379,11 @@ pub fn records_to_frames(records: Vec<Record>, details: Details) -> Vec<Frame> {
                 frame.custom.date_time = custom.update_timestamp;
             }
             Record::Home(home) => {
-                frame.home.latitude = home.latitude;
-                frame.home.longitude = home.longitude;
+                // Only update home coordinates if they are valid
+                if home.latitude != 0.0 && home.longitude != 0.0 {
+                    frame.home.latitude = home.latitude;
+                    frame.home.longitude = home.longitude;
+                }
                 // If home_altitude was not previously set, also update osd.altitude
                 if frame.home.altitude == f32::default() {
                     frame.osd.altitude += home.altitude;
@@ -423,6 +429,14 @@ pub fn records_to_frames(records: Vec<Record>, details: Details) -> Vec<Frame> {
             }
             Record::AppSeriousWarn(app_serious_warn) => {
                 frame.app.warn = append_message(frame.app.warn, app_serious_warn.message);
+            }
+            Record::AppGPS(app_gps) => {
+                // Use AppGPS coordinates when OSD coordinates are invalid (0.0)
+                // This is useful for version 11 logs where OSD coordinates are often corrupted
+                if frame.osd.latitude == 0.0 && frame.osd.longitude == 0.0 {
+                    frame.osd.longitude = app_gps.latitude;
+                    frame.osd.latitude = app_gps.longitude;
+                }
             }
             _ => {}
         }
