@@ -433,6 +433,7 @@ pub fn records_to_frames(records: Vec<Record>, details: Details) -> Vec<Frame> {
             Record::AppGPS(app_gps) => {
                 // Use AppGPS coordinates when OSD coordinates are invalid (0.0)
                 // This is useful for version 11 logs where OSD coordinates are often corrupted
+                // For some reason, longitude and latitude are swapped in AppGPS
                 if frame.osd.latitude == 0.0 && frame.osd.longitude == 0.0 {
                     frame.osd.longitude = app_gps.latitude;
                     frame.osd.latitude = app_gps.longitude;
