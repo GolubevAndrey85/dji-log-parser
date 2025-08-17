@@ -93,7 +93,6 @@ impl Frame {
 
         if let Some(first_cell) = self.battery.cell_voltages.first() {
             if *first_cell == 0.0 && self.battery.voltage > 0.0 {
-                //println!("---- Filling cell voltages because of is_cell_voltage_estimated = true");
                 self.battery.is_cell_voltage_estimated = true;
                 self.battery
                     .cell_voltages
@@ -152,7 +151,6 @@ impl Frame {
 ///   specific normalization logic.
 ///
 pub fn records_to_frames(records: Vec<Record>, details: Details) -> Vec<Frame> {
-    //println!("battery_cell_num: ", details.product_type.battery_cell_num());
     let mut frames = Vec::new();
     let mut frame = Frame {
         battery: FrameBattery {
@@ -173,17 +171,9 @@ pub fn records_to_frames(records: Vec<Record>, details: Details) -> Vec<Frame> {
         ..Frame::default()
     };
 
-    // frame.battery.cell_num = 6;
-    // frame.battery.cell_voltages = vec![0.0; 6 as usize];
-
     let mut frame_index = 0;
 
     for record in records {
-        // usefull output
-        // match serde_json::to_string(&record) {
-        //     Ok(json) => println!("{}", json),
-        //     Err(e) => eprintln!("Failed to serialize to JSON: {}", e),
-        // }
         match record {
             Record::OSD(osd) => {
                 if frame_index > 0 {
@@ -298,14 +288,12 @@ pub fn records_to_frames(records: Vec<Record>, details: Details) -> Vec<Frame> {
                 frame.rc.rudder = rc.rudder;
             }
             Record::CenterBattery(battery) => {
-                // println!("CenterBattery: ");
                 frame.battery.charge_level = battery.relative_capacity;
                 frame.battery.voltage = battery.voltage;
                 frame.battery.current_capacity = battery.current_capacity as u32;
                 frame.battery.full_capacity = battery.full_capacity as u32;
                 frame.battery.number_of_discharges = battery.number_of_discharges;
                 frame.battery.life = battery.life;
-                // frame.battery.full_capacity = battery.full_capacity as u32;
                 frame.battery.is_cell_voltage_estimated = false;
 
                 let cell_num = frame.battery.cell_voltages.len();
@@ -329,19 +317,16 @@ pub fn records_to_frames(records: Vec<Record>, details: Details) -> Vec<Frame> {
                 }
             }
             Record::SmartBattery(battery) => {
-                // println!("SmartBattery: ");
                 frame.battery.charge_level = battery.percent;
                 frame.battery.voltage = battery.voltage;
             }
             Record::SmartBatteryGroup(battery_group) => match battery_group {
                 SmartBatteryGroup::SmartBatteryStatic(battery) => {
-                    //println!("SmartBatteryStatic: ");
                     frame.battery.design_capacity = battery.designed_capacity;
                     frame.battery.lifetime_remaining = battery.battery_life;
                     frame.battery.number_of_discharges = battery.loop_times;
                 }
                 SmartBatteryGroup::SmartBatteryDynamic(battery) => {
-                    //println!("SmartBatteryDynamic: ");
                     // when there are multiple batteries, only one contains accurate values at index 1
                     if details.product_type.battery_num() < 2 || battery.index == 1 {
                         frame.battery.voltage = battery.current_voltage;
@@ -353,25 +338,13 @@ pub fn records_to_frames(records: Vec<Record>, details: Details) -> Vec<Frame> {
                     }
                 }
                 SmartBatteryGroup::SmartBatterySingleVoltage(battery) => {
-                    //println!("SmartBatterySingleVoltage: ");
-                    // println!("{}", battery.cell_count);
-                    // Convert the object to a JSON string
-                    // Convert to JSON string
-                    // match serde_json::to_string(&frame.battery) {
-                    //     Ok(json) => println!("{}", json),
-                    //     Err(e) => eprintln!("Failed to serialize to JSON: {}", e),
-                    // }
                     let cell_num = frame
                         .battery
                         .cell_voltages
                         .len()
                         .min(battery.cell_count as usize);
-                    // let cell_num = 6;
                     frame.battery.cell_voltages = vec![0.0; cell_num];
-                    // battery.cell_count = 6;
-                    // println!("frame.battery.cell_voltages: {}", frame.battery.cell_voltages.len());
-                    // println!("&battery.cell_voltages: {}", &battery.cell_voltages.len());
-
+                    
                     frame.battery.is_cell_voltage_estimated = false;
 
                     frame.battery.cell_voltages[..cell_num]
