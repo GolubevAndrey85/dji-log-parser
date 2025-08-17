@@ -3,6 +3,7 @@ use serde::Serialize;
 use tsify_next::Tsify;
 
 use crate::layout::details::Details;
+use crate::record::component_serial::ComponentType;
 use crate::record::osd::{AppCommand, GroundOrSky};
 use crate::record::smart_battery_group::SmartBatteryGroup;
 use crate::record::Record;
@@ -159,6 +160,15 @@ pub fn records_to_frames(records: Vec<Record>, details: Details) -> Vec<Frame> {
             cell_voltages: vec![0.0; details.product_type.battery_cell_num() as usize],
             is_cell_voltage_estimated: true,
             ..FrameBattery::default()
+        },
+        recover: FrameRecover {
+            app_platform: Some(details.app_platform.clone()),
+            app_version: details.app_version.clone(),
+            aircraft_name: details.aircraft_name.clone(),
+            aircraft_sn: details.aircraft_sn.clone(),
+            camera_sn: details.camera_sn.clone(),
+            rc_sn: details.rc_sn.clone(),
+            battery_sn: details.battery_sn.clone(),
         },
         ..Frame::default()
     };
@@ -357,7 +367,7 @@ pub fn records_to_frames(records: Vec<Record>, details: Details) -> Vec<Frame> {
                         .len()
                         .min(battery.cell_count as usize);
                     // let cell_num = 6;
-                    frame.battery.cell_voltages = vec![0.0; cell_num as usize];
+                    frame.battery.cell_voltages = vec![0.0; cell_num];
                     // battery.cell_count = 6;
                     // println!("frame.battery.cell_voltages: {}", frame.battery.cell_voltages.len());
                     // println!("&battery.cell_voltages: {}", &battery.cell_voltages.len());
@@ -416,10 +426,22 @@ pub fn records_to_frames(records: Vec<Record>, details: Details) -> Vec<Frame> {
                 frame.recover.app_platform = Some(recover.app_platform);
                 frame.recover.app_version = recover.app_version;
                 frame.recover.aircraft_name = recover.aircraft_name;
-                frame.recover.aircraft_sn = recover.aircraft_sn;
-                frame.recover.camera_sn = recover.camera_sn;
-                frame.recover.rc_sn = recover.rc_sn;
-                frame.recover.battery_sn = recover.battery_sn;
+                // Only update aircraft_sn if the current one is shorter (ComponentSerial takes precedence)
+                if frame.recover.aircraft_sn.len() <= recover.aircraft_sn.len() {
+                    frame.recover.aircraft_sn = recover.aircraft_sn;
+                }
+                // Only update camera_sn if the current one is shorter (ComponentSerial takes precedence)
+                if frame.recover.camera_sn.len() <= recover.camera_sn.len() {
+                    frame.recover.camera_sn = recover.camera_sn;
+                }
+                // Only update rc_sn if the current one is shorter (ComponentSerial takes precedence)
+                if frame.recover.rc_sn.len() <= recover.rc_sn.len() {
+                    frame.recover.rc_sn = recover.rc_sn;
+                }
+                // Only update battery_sn if the current one is shorter (ComponentSerial takes precedence)
+                if frame.recover.battery_sn.len() <= recover.battery_sn.len() {
+                    frame.recover.battery_sn = recover.battery_sn;
+                }
             }
             Record::AppTip(app_tip) => {
                 frame.app.tip = append_message(frame.app.tip, app_tip.message);
@@ -437,6 +459,25 @@ pub fn records_to_frames(records: Vec<Record>, details: Details) -> Vec<Frame> {
                 if frame.osd.latitude == 0.0 && frame.osd.longitude == 0.0 {
                     frame.osd.longitude = app_gps.latitude;
                     frame.osd.latitude = app_gps.longitude;
+                }
+            }
+            Record::ComponentSerial(component_serial) => {
+                match component_serial.component_type {
+                    ComponentType::Aircraft => {
+                        frame.recover.aircraft_sn = component_serial.serial;
+                    }
+                    ComponentType::Camera => {
+                        frame.recover.camera_sn = component_serial.serial;
+                    }
+                    ComponentType::RC => {
+                        frame.recover.rc_sn = component_serial.serial;
+                    }
+                    ComponentType::Battery => {
+                        frame.recover.battery_sn = component_serial.serial;
+                    }
+                    ComponentType::Unknown(_) => {
+                        // Ignore unknown component types
+                    }
                 }
             }
             _ => {}
