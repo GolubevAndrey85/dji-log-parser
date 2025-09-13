@@ -1,3 +1,4 @@
+use chrono::{DateTime, Utc};
 use serde::Serialize;
 #[cfg(target_arch = "wasm32")]
 use tsify_next::Tsify;
@@ -35,6 +36,8 @@ pub struct FrameDetails {
     pub app_platform: Platform,
     /// Version of the app used
     pub app_version: String,
+    /// Start time of the flight
+    pub start_time: DateTime<Utc>,
 }
 
 impl FrameDetails {
@@ -77,6 +80,7 @@ impl From<Details> for FrameDetails {
             rc_sn: value.rc_sn.clone(),
             app_platform: value.app_platform.clone(),
             app_version: value.app_version.clone(),
+            start_time: value.start_time,
         }
     }
 }
